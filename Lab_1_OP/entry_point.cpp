@@ -13,7 +13,7 @@ int performConversion(AppContext* context)
     if (context == NULL) {
         resultFlag = ERROR;
     } else {
-        int32_t value = 0;
+        uint32_t value = 0;
         ErrorCode parseResult = parseStringToInt32(context->inputString, context->sourceBase, &value);
         if (parseResult != ERROR_NONE) {
             switch (parseResult) {

@@ -4,7 +4,7 @@
 #include <string.h>
 #include "memory_utils.h"
 
-ErrorCode parseStringToInt32(const char* input, int base, int32_t* outputValue)
+ErrorCode parseStringToInt32(const char* input, int base, uint32_t* outputValue)
 {
     ErrorCode resultFlag = ERROR_NONE;
 
@@ -21,21 +21,21 @@ ErrorCode parseStringToInt32(const char* input, int base, int32_t* outputValue)
         } else if (result < INT32_MIN || result > INT32_MAX) {
             resultFlag = ERROR_OUT_OF_RANGE;
         } else {
-            *outputValue = (int32_t)result;
+            *outputValue = (uint32_t)result;
         }
     }
 
     return resultFlag;
 }
 
-ErrorCode convertToTwoComplement(int32_t value, int base, char** resultString)
+ErrorCode convertToTwoComplement(uint32_t value, int base, char** resultString)
 {
     ErrorCode resultFlag = ERROR_NONE;
 
     if (base != 2 && base != 8 && base != 16) {
         resultFlag = ERROR_INVALID_DIGIT;
     } else {
-        int32_t twoComplement = value;
+        uint32_t twoComplement = value;
 
         if (value < 0) {
             twoComplement = (1U << 31) + value;
@@ -48,7 +48,7 @@ ErrorCode convertToTwoComplement(int32_t value, int base, char** resultString)
 }
 
 
-ErrorCode convertInt32ToString(int32_t value, int base, char** resultString)
+ErrorCode convertInt32ToString(uint32_t value, int base, char** resultString)
 {
     ErrorCode resultFlag = ERROR_NONE;
 

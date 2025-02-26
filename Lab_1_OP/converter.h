@@ -10,8 +10,8 @@ typedef enum {
     ERROR_MEMORY_ALLOCATION
 } ErrorCode;
 
-ErrorCode parseStringToInt32(const char* input, int base, int32_t* outputValue);
-ErrorCode convertInt32ToString(int32_t value, int base, char** resultString);
-ErrorCode convertToTwoComplement(int32_t value, int base, char** resultString);
+ErrorCode parseStringToInt32(const char* input, int base, uint32_t* outputValue);
+ErrorCode convertInt32ToString(uint32_t value, int base, char** resultString);
+ErrorCode convertToTwoComplement(uint32_t value, int base, char** resultString);
 
 #endif // CONVERTER_H
