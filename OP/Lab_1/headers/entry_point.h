@@ -1,8 +1,6 @@
 #ifndef ENTRY_POINT_H
 #define ENTRY_POINT_H
 
-#include "converter.h"
-
 #define SUCCESS 0
 #define ERROR -1
 #define SIZE 33

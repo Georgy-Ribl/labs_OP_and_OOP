@@ -4,13 +4,19 @@
 #include <string.h>
 #include "memory_utils.h"
 
+#define MIN_BASE 2
+#define MAX_BASE 36
+#define OCT_BASE 8
+#define HEX_BASE 16
+
+
 ErrorCode parseStringToInt32(const char* input, int base, uint32_t* outputValue)
 {
     ErrorCode resultFlag = ERROR_NONE;
 
     if (!input || !outputValue) {
         resultFlag = ERROR_MEMORY_ALLOCATION;
-    } else if (base < 2 || base > 36) {
+    } else if (base < MIN_BASE || base > MAX_BASE) {
         resultFlag = ERROR_INVALID_DIGIT;
     } else {
         char* endPtr = NULL;
@@ -32,7 +38,7 @@ ErrorCode convertToTwoComplement(uint32_t value, int base, char** resultString)
 {
     ErrorCode resultFlag = ERROR_NONE;
 
-    if (base != 2 && base != 8 && base != 16) {
+    if (base != MIN_BASE && base != OCT_BASE && base != HEX_BASE) {
         resultFlag = ERROR_INVALID_DIGIT;
     } else {
         uint32_t twoComplement = value;
@@ -54,7 +60,7 @@ ErrorCode convertInt32ToString(uint32_t value, int base, char** resultString)
 
     if (!resultString) {
         resultFlag = ERROR_MEMORY_ALLOCATION;
-    } else if (base < 2 || base > 36) {
+    } else if (base < MIN_BASE || base > MAX_BASE) {
         resultFlag = ERROR_INVALID_DIGIT;
     } else {
         *resultString = NULL;
