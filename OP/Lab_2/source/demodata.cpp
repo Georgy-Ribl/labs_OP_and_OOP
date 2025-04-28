@@ -4,99 +4,155 @@
 #include <string.h>
 #include "stringutils.h"
 
-int initDemographicArray(DemographicArray* a)
+int initDemographicArray(DemographicArray* arr)
 {
-    a->records=NULL; a->size=0; a->capacity=0;
-    a->records=(DemographicRecord*)malloc(10*sizeof(DemographicRecord));
-    if(!a->records) return ERR_MEM;
-    a->capacity=10; return OK;
-}
-static int ensureCap(DemographicArray* a)
-{
-    if(a->size<a->capacity) return OK;
-    size_t nc=a->capacity*2;
-    void* p=realloc(a->records,nc*sizeof(DemographicRecord));
-    if(!p) return ERR_MEM;
-    a->records=(DemographicRecord*)p; a->capacity=nc; return OK;
-}
-int pushDemographicRecord(DemographicArray* a,const DemographicRecord* r)
-{
-    int st=ensureCap(a); if(st!=OK) return st;
-    a->records[a->size++]=*r; return OK;
-}
-void freeDemographicArray(DemographicArray* a)
-{
-    free(a->records); a->records=NULL;a->size=a->capacity=0;
+    arr->records  = (DemographicRecord*)malloc(10 * sizeof(DemographicRecord));
+    if (!arr->records) return ERR_MEM;
+    arr->size     = 0;
+    arr->capacity = 10;
+    return OK;
 }
 
-static int parseLine(const char* line,DemographicRecord* rec)
+static int ensureCap(DemographicArray* arr)
 {
-    char t[CSV_FIELDS][FIELD_SIZE]; char* p[CSV_FIELDS];
-    for(int i=0;i<CSV_FIELDS;i++){p[i]=t[i];t[i][0]='\0';}
-    if(splitLine(line,',',p,CSV_FIELDS,FIELD_SIZE)) return 1;
-    strncpy(rec->year  ,p[0],FIELD_SIZE-1); rec->year  [FIELD_SIZE-1]='\0';
-    strncpy(rec->region,p[1],FIELD_SIZE-1); rec->region[FIELD_SIZE-1]='\0';
-    rec->npg         = atof(p[2]);
-    rec->birthRate   = atof(p[3]);
-    rec->deathRate   = atof(p[4]);
-    rec->gdw         = atof(p[5]);
-    rec->urbanization= atof(p[6]);
-    return 0;
+    if (arr->size < arr->capacity) return OK;
+    size_t nc = arr->capacity * 2;
+    DemographicRecord* p = (DemographicRecord*)realloc(
+        arr->records, nc * sizeof(DemographicRecord));
+    if (!p) return ERR_MEM;
+    arr->records  = p;
+    arr->capacity = nc;
+    return OK;
 }
 
-int parseCSVFile(const char* fn,DemographicArray* a,size_t* tot,size_t* bad)
+int pushDemographicRecord(DemographicArray* arr, const DemographicRecord* rec)
 {
-    FILE* f=fopen(fn,"r"); if(!f) return ERR_FILE;
-    char buf[1024]; *tot=*bad=0;
-    fgets(buf,sizeof(buf),f);                         /* заголовок */
-    while(fgets(buf,sizeof(buf),f)){
-        (*tot)++; size_t len=strlen(buf);
-        if(len&&buf[len-1]=='\n') buf[len-1]='\0';
-        DemographicRecord r;
-        if(parseLine(buf,&r)) {(*bad)++; continue;}
-        if(pushDemographicRecord(a,&r)!=OK){fclose(f);return ERR_MEM;}
+    int st = ensureCap(arr);
+    if (st != OK) return st;
+    arr->records[arr->size++] = *rec;
+    return OK;
+}
+
+void freeDemographicArray(DemographicArray* arr)
+{
+    free(arr->records);
+    arr->records = NULL;
+    arr->size     = 0;
+    arr->capacity = 0;
+}
+
+static int parseLine(const char* line, DemographicRecord* out)
+{
+    char buf[CSV_FIELDS_COUNT][FIELD_SIZE];
+    char* ptrs[CSV_FIELDS_COUNT];
+    for (int i = 0; i < CSV_FIELDS_COUNT; i++) {
+        ptrs[i]    = buf[i];
+        buf[i][0]  = '\0';
     }
-    fclose(f); return OK;
+    if (splitLine(line, ',', ptrs, CSV_FIELDS_COUNT, FIELD_SIZE))
+        return ERR_PARSE;
+    strncpy(out->year,        buf[0], FIELD_SIZE - 1);
+    strncpy(out->region,      buf[1], FIELD_SIZE - 1);
+    out->npg        = atof(buf[2]);
+    out->birthRate  = atof(buf[3]);
+    out->deathRate  = atof(buf[4]);
+    out->gdw        = atof(buf[5]);
+    out->urbanization = atof(buf[6]);
+    return OK;
 }
 
-static void qsortD(double* v,size_t l,size_t r)
+int parseCSVFile(const char* filename,
+                 DemographicArray* arr,
+                 size_t* totalLines,
+                 size_t* errorLines)
 {
-    if(l>=r) return;
-    double p=v[(l+r)/2]; size_t i=l,j=r;
-    while(i<=j){
-        while(v[i]<p)i++; while(v[j]>p)j--;
-        if(i<=j){double tmp=v[i];v[i]=v[j];v[j]=tmp;i++; if(j)j--;}
+    FILE* f = fopen(filename, "r");
+    if (!f) return ERR_FILE;
+    char line[1024];
+    *totalLines = 0;
+    *errorLines = 0;
+    fgets(line, sizeof(line), f);
+    while (fgets(line, sizeof(line), f)) {
+        (*totalLines)++;
+        size_t len = strlen(line);
+        if (len && line[len - 1] == '\n')
+            line[len - 1] = '\0';
+        DemographicRecord tmp;
+        if (parseLine(line, &tmp) != OK) {
+            (*errorLines)++;
+        } else {
+            int st = pushDemographicRecord(arr, &tmp);
+            if (st != OK) {
+                fclose(f);
+                return st;
+            }
+        }
     }
-    if(j>l) qsortD(v,l,j); if(i<r) qsortD(v,i,r);
+    fclose(f);
+    return OK;
 }
-static double getVal(const DemographicRecord* r,int c)
+
+static void quickSort(double* v, size_t l, size_t r)
 {
-    switch(c){
-    case COL_NPG:          return r->npg;
-    case COL_BIRTH_RATE:   return r->birthRate;
-    case COL_DEATH_RATE:   return r->deathRate;
-    case COL_GDW:          return r->gdw;
+    if (l >= r) return;
+    double  pivot = v[(l + r) / 2];
+    size_t  i     = l, j = r;
+    while (i <= j) {
+        while (v[i] < pivot) i++;
+        while (v[j] > pivot) j--;
+        if (i <= j) {
+            double t = v[i]; v[i] = v[j]; v[j] = t;
+            i++; if (j) j--;
+        }
+    }
+    if (j > l) quickSort(v, l, j);
+    if (i < r) quickSort(v, i, r);
+}
+
+static double getVal(const DemographicRecord* r, int c)
+{
+    switch (c) {
+    case COL_NPG: return r->npg;
+    case COL_BIRTH_RATE: return r->birthRate;
+    case COL_DEATH_RATE: return r->deathRate;
+    case COL_GDW: return r->gdw;
     case COL_URBANIZATION: return r->urbanization;
-    default:               return 0.0;
+    default: return 0.0;
     }
 }
 
-int calculateMinMaxMedian(const DemographicArray* a,const char* region,
-                          int col,double* mn,double* mx,double* med)
+int calculateMinMaxMedian(const DemographicArray* arr,
+                          const char* region,
+                          int col,
+                          double* mn,
+                          double* mx,
+                          double* md)
 {
-    if(!a||a->size==0||col<3||col>7) return ERR_USER_INPUT;
-    double* vals=NULL; size_t n=0,cap=0;
-    for(size_t i=0;i<a->size;i++){
-        const DemographicRecord* r=&a->records[i];
-        if(region&&*region&&strcmp(r->region,region)!=0) continue;
-        if(n==cap){size_t nc=cap?cap*2:16;double* p=(double*)realloc(vals,nc*sizeof(double));
-            if(!p){free(vals);return ERR_MEM;} vals=p; cap=nc;}
-        vals[n++]=getVal(r,col);
+    if (!arr || arr->size == 0 || col < COL_NPG || col > COL_URBANIZATION)
+        return ERR_USER_INPUT;
+    double* vals = NULL;
+    size_t cnt = 0, cap = 0;
+    for (size_t i = 0; i < arr->size; i++) {
+        const auto* r = &arr->records[i];
+        if (region[0] && strcmp(r->region, region) != 0) continue;
+        if (cnt >= cap) {
+            size_t nc = cap ? cap * 2 : 16;
+            double* p = (double*)realloc(vals, nc * sizeof(double));
+            if (!p) { free(vals); return ERR_MEM; }
+            vals = p; cap = nc;
+        }
+        vals[cnt++] = getVal(r, col);
     }
-    if(n==0){free(vals);return ERR_NOT_FOUND;}
-    *mn=*mx=vals[0];
-    for(size_t i=1;i<n;i++){ if(vals[i]<*mn)*mn=vals[i]; if(vals[i]>*mx)*mx=vals[i];}
-    qsortD(vals,0,n-1);
-    *med = (n%2)? vals[n/2] : (vals[n/2-1]+vals[n/2])/2.0;
-    free(vals); return OK;
+    if (cnt == 0) { free(vals); return ERR_NOT_FOUND; }
+    *mn = *mx = vals[0];
+    for (size_t i = 1; i < cnt; i++) {
+        if (vals[i] < *mn) *mn = vals[i];
+        if (vals[i] > *mx) *mx = vals[i];
+    }
+    quickSort(vals, 0, cnt - 1);
+    *md = (cnt % 2)
+              ? vals[cnt / 2]
+              : (vals[cnt/2 - 1] + vals[cnt/2]) * 0.5;
+    free(vals);
+    return OK;
 }

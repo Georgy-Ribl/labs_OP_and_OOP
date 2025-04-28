@@ -1,10 +1,33 @@
 #include "entrypoint.h"
 #include "operations.h"
 
-int doOperations(Operation op,
-                 void* p1, void* p2,
-                 void* p3, void* p4,
-                 void* p5)
+int doOperations(Operation op)
 {
-    return dispatchOperation(op, p1, p2, p3, p4, p5);
+    int result = ERR_USER_INPUT;
+    if (op == OP_INIT) {
+        result = opInit();
+    }
+    else if (op == OP_LOAD) {
+        result = opLoad();
+    }
+    else if (op == OP_STATS) {
+        opStats();
+        result = OK;
+    }
+    else if (op == OP_METRICS) {
+        result = opMetrics();
+    }
+    else if (op == OP_CLEANUP) {
+        opCleanup();
+        result = OK;
+    }
+    else if (op == OP_COUNT) {
+        opCount();
+        result = OK;
+    }
+    else if (op == OP_AT) {
+        opAt(0);
+        result = OK;
+    }
+    return result;
 }

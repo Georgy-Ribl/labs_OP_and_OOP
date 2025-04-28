@@ -5,18 +5,15 @@
 #include "demodata.h"
 
 typedef enum {
-    OP_INIT,
-    OP_LOAD,
-    OP_STATS,
-    OP_METRICS,
-    OP_CLEANUP,
-    OP_COUNT,
-    OP_AT
+    OP_INIT     = 1,
+    OP_LOAD     = 2,
+    OP_STATS    = 3,
+    OP_METRICS  = 4,
+    OP_CLEANUP  = 5,
+    OP_COUNT    = 6,
+    OP_AT       = 7
 } Operation;
 
-int doOperations(Operation op,
-                 void* p1, void* p2,
-                 void* p3, void* p4,
-                 void* p5);
+int doOperations(Operation op);
 
-#endif
+#endif // ENTRYPOINT_H

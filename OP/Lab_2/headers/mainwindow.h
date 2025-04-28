@@ -2,30 +2,29 @@
 #define MAINWINDOW_H
 
 #include <QMainWindow>
-#include "entrypoint.h"
-
-class QLineEdit;
-class QPushButton;
-class QLabel;
-class QTableWidget;
+#include <QPushButton>
+#include <QLineEdit>
+#include <QLabel>
+#include <QTableWidget>
 
 class MainWindow : public QMainWindow
 {
     Q_OBJECT
+
 public:
-    explicit MainWindow(QWidget* parent=nullptr);
+    explicit MainWindow(QWidget* parent = nullptr);
     ~MainWindow();
 
 private slots:
     void onChooseFileClicked();
     void onLoadDataClicked();
-    void onCalcClicked();
+    void onCalculateMetricsClicked();
 
 private:
-    void fillTable(const char* region);
+    void fillTable();
 
-    QLineEdit*    m_fileEdit;
     QPushButton*  m_chooseBtn;
+    QLineEdit*    m_fileEdit;
     QLineEdit*    m_regionEdit;
     QLineEdit*    m_colEdit;
     QPushButton*  m_loadBtn;
@@ -36,4 +35,4 @@ private:
     QLabel*       m_medLbl;
 };
 
-#endif
+#endif // MAINWINDOW_H

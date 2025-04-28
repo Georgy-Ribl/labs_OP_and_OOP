@@ -1,75 +1,84 @@
 #include "operations.h"
+#include <stdlib.h>
+#include <string.h>
 
 static DemographicArray gData;
 static size_t           gTotal = 0, gBad = 0;
+static char             gFileName[256];
+static char             gFilter[256];
+static int              gColumn;
+static double           gMin, gMax, gMed;
 
-static int opInit(void* p1, void* p2, void* p3, void* p4, void* p5)
+int opInit()
 {
     gTotal = gBad = 0;
+    gFileName[0] = gFilter[0] = '\0';
+    gColumn = COL_NPG;
     return initDemographicArray(&gData);
 }
 
-static int opLoad(void* p1, void* p2, void* p3, void* p4, void* p5)
+int opLoad()
 {
     freeDemographicArray(&gData);
     initDemographicArray(&gData);
-    const char* filename = reinterpret_cast<const char*>(p1);
-    return parseCSVFile(filename, &gData, &gTotal, &gBad);
+    return parseCSVFile(gFileName, &gData, &gTotal, &gBad);
 }
 
-static int opStats(void* p1, void* p2, void* p3, void* p4, void* p5)
+void opStats()
 {
-    if (p1) *reinterpret_cast<size_t*>(p1) = gTotal;
-    if (p2) *reinterpret_cast<size_t*>(p2) = gBad;
-    return OK;
 }
 
-static int opMetrics(void* p1, void* p2, void* p3, void* p4, void* p5)
+int opMetrics()
 {
-    const char* region = reinterpret_cast<const char*>(p1);
-    int column = *reinterpret_cast<int*>(p2);
-    double* mn = reinterpret_cast<double*>(p3);
-    double* mx = reinterpret_cast<double*>(p4);
-    double* md = reinterpret_cast<double*>(p5);
-    return calculateMinMaxMedian(&gData, region, column, mn, mx, md);
+    return calculateMinMaxMedian(&gData,
+                                 gFilter,
+                                 gColumn,
+                                 &gMin,
+                                 &gMax,
+                                 &gMed);
 }
 
-static int opCleanup(void* p1, void* p2, void* p3, void* p4, void* p5)
+void opCleanup()
 {
     freeDemographicArray(&gData);
-    return OK;
 }
 
-static int opCount(void* p1, void* p2, void* p3, void* p4, void* p5)
+size_t opCount()
 {
-    if (p1) *reinterpret_cast<size_t*>(p1) = gData.size;
-    return OK;
+    return gData.size;
 }
 
-static int opAt(void* p1, void* p2, void* p3, void* p4, void* p5)
+const DemographicRecord* opAt(size_t idx)
 {
-    size_t idx = *reinterpret_cast<size_t*>(p1);
-    if (idx >= gData.size) return ERR_NOT_FOUND;
-    *reinterpret_cast<DemographicRecord*>(p2) = gData.records[idx];
-    return OK;
+    return idx < gData.size ? &gData.records[idx] : nullptr;
 }
 
-typedef int(*Func)(void*,void*,void*,void*,void*);
-
-int dispatchOperation(Operation op,
-                      void* p1, void* p2,
-                      void* p3, void* p4,
-                      void* p5)
+void setOpFileName(const char* fn)
 {
-    static Func table[] = {
-        opInit,
-        opLoad,
-        opStats,
-        opMetrics,
-        opCleanup,
-        opCount,
-        opAt
-    };
-    if (op < 0 || op > OP_AT) return ERR_USER_INPUT;
-    return table[op](p1, p2, p3, p4, p5);
+    strncpy(gFileName, fn, sizeof(gFileName) - 1);
+    gFileName[sizeof(gFileName) - 1] = '\0';
+}
+
+void setOpFilterRegion(const char* r)
+{
+    strncpy(gFilter, r, sizeof(gFilter) - 1);
+    gFilter[sizeof(gFilter) - 1] = '\0';
+}
+
+void setOpColumn(int idx)
+{
+    gColumn = idx;
+}
+
+void getOpStats(size_t* total, size_t* bad)
+{
+    if (total) *total = gTotal;
+    if (bad)   *bad   = gBad;
+}
+
+void getOpMetrics(double* mn, double* mx, double* md)
+{
+    if (mn) *mn = gMin;
+    if (mx) *mx = gMax;
+    if (md) *md = gMed;
 }
