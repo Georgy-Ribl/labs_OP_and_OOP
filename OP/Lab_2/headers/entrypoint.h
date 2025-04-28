@@ -15,5 +15,17 @@ typedef enum {
 } Operation;
 
 int doOperations(Operation op);
+int opInit();
+int opLoad();
+void opStats();
+int opMetrics();
+void opCleanup();
+size_t opCount();
+const DemographicRecord* opAt(size_t idx);
+void setOpFileName(const char* fn);
+void setOpFilterRegion(const char* region);
+void setOpColumn(int idx);
+void getOpStats(size_t* total, size_t* bad);
+void getOpMetrics(double* mn, double* mx, double* md);
 
-#endif // ENTRYPOINT_H
+#endif

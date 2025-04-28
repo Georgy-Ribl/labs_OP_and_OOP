@@ -17,6 +17,7 @@ set(SOURCES
     stringutils.cpp
     demodata.cpp
     operations.cpp
+    entrypoint.cpp
 )
 
 set(HEADERS
@@ -25,7 +26,9 @@ set(HEADERS
     stringutils.h
     demodata.h
     operations.h
+    entrypoint.h
 )
 
-qt_add_executable(Lab2_OP ${SOURCES} ${HEADERS})
+qt_add_executable(Lab2_OP ${SOURCES} ${HEADERS}
+    entrypoint.h entrypoint.cpp)
 target_link_libraries(Lab2_OP PRIVATE Qt6::Widgets)
