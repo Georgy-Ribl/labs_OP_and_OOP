@@ -2,21 +2,22 @@
 #include <string.h>
 
 int splitLine(const char* line,
-              char d,
-              char** tok,
-              size_t cnt,
-              size_t buf)
+              char        delimiter,
+              char**      tokens,
+              size_t      tokenCount,
+              size_t      tokenBufSize)
 {
-    char tmp[1024];
-    strncpy(tmp, line, sizeof(tmp) - 1);
-    tmp[sizeof(tmp) - 1] = '\0';
+    char tmp[MAX_LINE_LENGTH];
+    strncpy(tmp, line, MAX_LINE_LENGTH - 1);
+    tmp[MAX_LINE_LENGTH - 1] = '\0';
+
     size_t n = 0;
-    char*  p = strtok(tmp, &d);
-    while (p && n < cnt) {
-        strncpy(tok[n], p, buf - 1);
-        tok[n][buf - 1] = '\0';
+    char*  tok = strtok(tmp, &delimiter);
+    while (tok && n < tokenCount) {
+        strncpy(tokens[n], tok, tokenBufSize - 1);
+        tokens[n][tokenBufSize - 1] = '\0';
         n++;
-        p = strtok(NULL, &d);
+        tok = strtok(NULL, &delimiter);
     }
-    return n == cnt ? 0 : 1;
+    return (n == tokenCount) ? 0 : 1;
 }

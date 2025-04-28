@@ -2,45 +2,63 @@
 #include <stdlib.h>
 #include <string.h>
 
-static int ensureCap(DynamicArray* a)
+static int ensureCapacity(DynamicArray* arr)
 {
-    if (a->size < a->capacity) return OK;
-    size_t nc = a->capacity ? a->capacity * 2 : 1;
-    void*  p  = realloc(a->data, nc * a->elementSize);
-    if (!p) return ERR_MEM;
-    a->data     = p;
-    a->capacity = nc;
-    return OK;
+    if (arr->size < arr->capacity) {
+        return 0;
+    }
+    size_t newCap = arr->capacity ? arr->capacity * 2 : 1;
+    void* tmp = realloc(arr->data, newCap * arr->elementSize);
+    if (!tmp) {
+        return ERR_MEM;
+    }
+    arr->data     = tmp;
+    arr->capacity = newCap;
+    return 0;
 }
 
-int daInit(DynamicArray* a, size_t c, size_t es)
+int daInit(DynamicArray* arr, size_t initialCapacity, size_t elementSize)
 {
-    a->data        = NULL;
-    a->size        = 0;
-    a->capacity    = 0;
-    a->elementSize = es;
-    return ensureCap(a);
+    arr->data        = NULL;
+    arr->size        = 0;
+    arr->capacity    = 0;
+    arr->elementSize = elementSize;
+    if (initialCapacity) {
+        arr->data = malloc(initialCapacity * elementSize);
+        if (!arr->data) {
+            return ERR_MEM;
+        }
+        arr->capacity = initialCapacity;
+    }
+    return 0;
 }
 
-int daPushBack(DynamicArray* a, const void* e)
+int daPushBack(DynamicArray* arr, const void* element)
 {
-    int st = ensureCap(a);
-    if (st != OK) return st;
-    memcpy((char*)a->data + a->size * a->elementSize, e, a->elementSize);
-    a->size++;
-    return OK;
+    int st = ensureCapacity(arr);
+    if (st) {
+        return st;
+    }
+    memcpy((char*)arr->data + arr->size * arr->elementSize,
+           element,
+           arr->elementSize);
+    arr->size += 1;
+    return 0;
 }
 
-void* daGet(const DynamicArray* a, size_t idx)
+void* daGet(const DynamicArray* arr, size_t idx)
 {
-    return idx < a->size ? (char*)a->data + idx * a->elementSize : NULL;
+    if (idx >= arr->size) {
+        return NULL;
+    }
+    return (char*)arr->data + idx * arr->elementSize;
 }
 
-void daFree(DynamicArray* a)
+void daFree(DynamicArray* arr)
 {
-    free(a->data);
-    a->data     = NULL;
-    a->size     = 0;
-    a->capacity = 0;
-    a->elementSize = 0;
+    free(arr->data);
+    arr->data        = NULL;
+    arr->size        = 0;
+    arr->capacity    = 0;
+    arr->elementSize = 0;
 }

@@ -2,7 +2,7 @@
 #define ARRAYUTILS_H
 
 #include <stddef.h>
-#define OK      0
+
 #define ERR_MEM 2
 
 typedef struct {
@@ -12,9 +12,13 @@ typedef struct {
     size_t capacity;
 } DynamicArray;
 
-int    daInit     (DynamicArray* arr, size_t initialCap, size_t elemSize);
-int    daPushBack (DynamicArray* arr, const void* elem);
-void*  daGet      (const DynamicArray* arr, size_t index);
-void   daFree     (DynamicArray* arr);
+
+int daInit(DynamicArray* arr, size_t initialCapacity, size_t elementSize);
+
+int daPushBack(DynamicArray* arr, const void* element);
+
+void* daGet(const DynamicArray* arr, size_t index);
+
+void daFree(DynamicArray* arr);
 
 #endif // ARRAYUTILS_H

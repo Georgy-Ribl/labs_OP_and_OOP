@@ -1,110 +1,107 @@
 #include "mainwindow.h"
-#include "entrypoint.h"
-#include "operations.h"
-
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QVBoxLayout>
 #include <QHBoxLayout>
 #include <QTableWidgetItem>
-#include <QStringList>
 #include <cstring>
-
-// Добавлено:
-#include <QWidget>
 
 MainWindow::MainWindow(QWidget* parent)
     : QMainWindow(parent)
 {
-    doOperations(OP_INIT);
+    initOperationsContext(&m_ctx);
 
     auto* central = new QWidget(this);
-    auto* vlay    = new QVBoxLayout(central);
+    auto* mainLayout = new QVBoxLayout(central);
 
-    auto* fLay = new QHBoxLayout;
-    m_chooseBtn = new QPushButton("Выбрать файл", this);
-    m_fileEdit  = new QLineEdit(this);
-    fLay->addWidget(m_chooseBtn);
-    fLay->addWidget(m_fileEdit);
+    auto* fileLayout = new QHBoxLayout;
+    m_chooseButton   = new QPushButton(tr("Выбрать файл"), this);
+    m_fileLineEdit   = new QLineEdit(this);
+    fileLayout->addWidget(m_chooseButton);
+    fileLayout->addWidget(m_fileLineEdit);
 
-    auto* rLay = new QHBoxLayout;
-    rLay->addWidget(new QLabel("Регион:", this));
-    m_regionEdit = new QLineEdit(this);
-    rLay->addWidget(m_regionEdit);
+    auto* regionLayout = new QHBoxLayout;
+    regionLayout->addWidget(new QLabel(tr("Регион:"), this));
+    m_regionLineEdit = new QLineEdit(this);
+    regionLayout->addWidget(m_regionLineEdit);
 
-    auto* cLay = new QHBoxLayout;
-    cLay->addWidget(new QLabel("Колонка:", this));
-    m_colEdit = new QLineEdit(this);
-    cLay->addWidget(m_colEdit);
+    auto* columnLayout = new QHBoxLayout;
+    columnLayout->addWidget(new QLabel(tr("Колонка:"), this));
+    m_columnLineEdit = new QLineEdit(this);
+    columnLayout->addWidget(m_columnLineEdit);
 
-    m_loadBtn = new QPushButton("Load data", this);
-    m_calcBtn = new QPushButton("Calculate metrics", this);
-    m_table   = new QTableWidget(this);
+    m_loadButton   = new QPushButton(tr("Load data"), this);
+    m_tableWidget  = new QTableWidget(this);
 
-    auto* resLay = new QHBoxLayout;
-    resLay->addWidget(new QLabel("Min:", this));
-    m_minLbl = new QLabel("-", this);
-    resLay->addWidget(m_minLbl);
-    resLay->addWidget(new QLabel("Max:", this));
-    m_maxLbl = new QLabel("-", this);
-    resLay->addWidget(m_maxLbl);
-    resLay->addWidget(new QLabel("Med:", this));
-    m_medLbl = new QLabel("-", this);
-    resLay->addWidget(m_medLbl);
+    m_calcButton   = new QPushButton(tr("Calculate metrics"), this);
 
-    vlay->addLayout(fLay);
-    vlay->addLayout(rLay);
-    vlay->addLayout(cLay);
-    vlay->addWidget(m_loadBtn);
-    vlay->addWidget(m_table);
-    vlay->addWidget(m_calcBtn);
-    vlay->addLayout(resLay);
+    auto* resultLayout = new QHBoxLayout;
+    resultLayout->addWidget(new QLabel(tr("Min:"), this));
+    m_minLabel    = new QLabel("-", this);
+    resultLayout->addWidget(m_minLabel);
+    resultLayout->addWidget(new QLabel(tr("Max:"), this));
+    m_maxLabel    = new QLabel("-", this);
+    resultLayout->addWidget(m_maxLabel);
+    resultLayout->addWidget(new QLabel(tr("Med:"), this));
+    m_medianLabel = new QLabel("-", this);
+    resultLayout->addWidget(m_medianLabel);
+
+    mainLayout->addLayout(fileLayout);
+    mainLayout->addLayout(regionLayout);
+    mainLayout->addLayout(columnLayout);
+    mainLayout->addWidget(m_loadButton);
+    mainLayout->addWidget(m_tableWidget);
+    mainLayout->addWidget(m_calcButton);
+    mainLayout->addLayout(resultLayout);
 
     setCentralWidget(central);
 
-    connect(m_chooseBtn, &QPushButton::clicked,
+    connect(m_chooseButton, &QPushButton::clicked,
             this, &MainWindow::onChooseFileClicked);
-    connect(m_loadBtn,    &QPushButton::clicked,
+    connect(m_loadButton, &QPushButton::clicked,
             this, &MainWindow::onLoadDataClicked);
-    connect(m_calcBtn,    &QPushButton::clicked,
+    connect(m_calcButton, &QPushButton::clicked,
             this, &MainWindow::onCalculateMetricsClicked);
 }
 
 MainWindow::~MainWindow()
 {
-    doOperations(OP_CLEANUP);
+    cleanupOperationsContext(&m_ctx);
 }
 
 void MainWindow::onChooseFileClicked()
 {
     QString fn = QFileDialog::getOpenFileName(
-        this, "Выберите CSV-файл", QString(), "CSV Files (*.csv)");
-    if (!fn.isEmpty())
-        m_fileEdit->setText(fn);
+        this, tr("Выберите CSV-файл"), QString(), tr("CSV Files (*.csv)"));
+    if (!fn.isEmpty()) {
+        m_fileLineEdit->setText(fn);
+    }
 }
 
 void MainWindow::onLoadDataClicked()
 {
-    QString path = m_fileEdit->text();
+    QString path = m_fileLineEdit->text();
     if (path.isEmpty()) {
-        QMessageBox::warning(this, "Ошибка", "Путь к файлу пуст");
+        QMessageBox::warning(this, tr("Ошибка"), tr("Путь к файлу пуст"));
         return;
     }
 
-    setOpFileName(path.toUtf8().constData());
-    if (doOperations(OP_LOAD) != OK) {
-        QMessageBox::warning(this, "Ошибка", "Не удалось загрузить CSV");
+    setFileName(&m_ctx, path.toUtf8().constData());
+    int status = loadData(&m_ctx);
+    if (status != OK) {
+        QMessageBox::warning(this, tr("Ошибка"), tr("Не удалось загрузить CSV"));
         return;
     }
 
     size_t total = 0, bad = 0;
-    doOperations(OP_STATS);
-    getOpStats(&total, &bad);
+    getLoadStats(&m_ctx, &total, &bad);
 
     QMessageBox::information(
         this,
-        "Информация",
-        QString("Всего строк: %1\nОшибок: %2").arg(total).arg(bad)
+        tr("Информация"),
+        tr("Всего строк: %1\nОшибок: %2")
+            .arg((int)total)
+            .arg((int)bad)
         );
 
     fillTable();
@@ -112,54 +109,56 @@ void MainWindow::onLoadDataClicked()
 
 void MainWindow::fillTable()
 {
-    m_table->clear();
-    m_table->setColumnCount(7);
-    m_table->setHorizontalHeaderLabels(
-        {"year","region","npg","birth","death","gdw","urban"});
+    m_tableWidget->clear();
+    m_tableWidget->setColumnCount(CSV_FIELDS_COUNT);
+    m_tableWidget->setHorizontalHeaderLabels(
+        QStringList{"year","region","npg","birth","death","gdw","urban"});
 
-    size_t cnt = opCount();
-    m_table->setRowCount(0);
+    size_t count = countRecords(&m_ctx);
+    m_tableWidget->setRowCount(0);
 
-    for (size_t i = 0; i < cnt; ++i) {
-        const DemographicRecord* r = opAt(i);
-        if (!m_regionEdit->text().isEmpty() &&
-            strcmp(r->region,
-                   m_regionEdit->text().toUtf8().constData()) != 0)
+    std::string filter = m_regionLineEdit->text().toStdString();
+    for (size_t i = 0; i < count; ++i) {
+        const DemographicRecord* r = getRecordAt(&m_ctx, i);
+        if (!filter.empty() &&
+            std::strcmp(r->region, filter.c_str()) != 0)
+        {
             continue;
-
-        int row = m_table->rowCount();
-        m_table->insertRow(row);
-        m_table->setItem(row, 0, new QTableWidgetItem(r->year));
-        m_table->setItem(row, 1, new QTableWidgetItem(r->region));
-        m_table->setItem(row, 2, new QTableWidgetItem(QString::number(r->npg)));
-        m_table->setItem(row, 3, new QTableWidgetItem(QString::number(r->birthRate)));
-        m_table->setItem(row, 4, new QTableWidgetItem(QString::number(r->deathRate)));
-        m_table->setItem(row, 5, new QTableWidgetItem(QString::number(r->gdw)));
-        m_table->setItem(row, 6, new QTableWidgetItem(QString::number(r->urbanization)));
+        }
+        int row = m_tableWidget->rowCount();
+        m_tableWidget->insertRow(row);
+        m_tableWidget->setItem(row, 0, new QTableWidgetItem(r->year));
+        m_tableWidget->setItem(row, 1, new QTableWidgetItem(r->region));
+        m_tableWidget->setItem(row, 2, new QTableWidgetItem(QString::number(r->npg)));
+        m_tableWidget->setItem(row, 3, new QTableWidgetItem(QString::number(r->birthRate)));
+        m_tableWidget->setItem(row, 4, new QTableWidgetItem(QString::number(r->deathRate)));
+        m_tableWidget->setItem(row, 5, new QTableWidgetItem(QString::number(r->gdw)));
+        m_tableWidget->setItem(row, 6, new QTableWidgetItem(QString::number(r->urbanization)));
     }
 }
 
 void MainWindow::onCalculateMetricsClicked()
 {
     bool ok = false;
-    int col = m_colEdit->text().toInt(&ok);
-    if (!ok) {
-        QMessageBox::warning(this, "Ошибка", "Неверный номер колонки");
+    int col = m_columnLineEdit->text().toInt(&ok);
+    if (!ok || col < COL_NPG || col > COL_URBANIZATION) {
+        QMessageBox::warning(this, tr("Ошибка"), tr("Неверный номер колонки"));
         return;
     }
 
-    setOpFilterRegion(m_regionEdit->text().toUtf8().constData());
-    setOpColumn(col);
+    setFilterRegion(&m_ctx, m_regionLineEdit->text().toUtf8().constData());
+    setColumnIndex(&m_ctx, col);
 
-    if (doOperations(OP_METRICS) != OK) {
-        QMessageBox::warning(this, "Ошибка", "Не удалось вычислить метрики");
+    int status = computeMetrics(&m_ctx);
+    if (status != OK) {
+        QMessageBox::warning(this, tr("Ошибка"), tr("Не удалось вычислить метрики"));
         return;
     }
 
-    double mn = 0, mx = 0, md = 0;
-    getOpMetrics(&mn, &mx, &md);
+    double mn, mx, md;
+    getMetrics(&m_ctx, &mn, &mx, &md);
 
-    m_minLbl->setText(QString::number(mn));
-    m_maxLbl->setText(QString::number(mx));
-    m_medLbl->setText(QString::number(md));
+    m_minLabel->setText(QString::number(mn));
+    m_maxLabel->setText(QString::number(mx));
+    m_medianLabel->setText(QString::number(md));
 }
