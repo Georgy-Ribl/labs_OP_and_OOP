@@ -14,11 +14,15 @@ class MainWindow : public QMainWindow
 public:
     explicit MainWindow(QWidget* parent = nullptr);
     ~MainWindow();
+
 private slots:
     void onChooseFileClicked();
     void onLoadDataClicked();
     void onCalculateMetricsClicked();
+
 private:
+    OperationsContext m_ctx;
+
     void fillTable();
     QPushButton*  m_chooseBtn;
     QLineEdit*    m_fileEdit;
@@ -32,4 +36,4 @@ private:
     QLabel*       m_medLbl;
 };
 
-#endif
+#endif // MAINWINDOW_H

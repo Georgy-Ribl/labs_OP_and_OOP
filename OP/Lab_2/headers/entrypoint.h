@@ -2,7 +2,7 @@
 #define ENTRYPOINT_H
 
 #include <stddef.h>
-#include "demodata.h"
+#include "operations.h"
 
 typedef enum {
     OP_INIT     = 1,
@@ -14,18 +14,14 @@ typedef enum {
     OP_AT       = 7
 } Operation;
 
-int doOperations(Operation op);
-int opInit();
-int opLoad();
-void opStats();
-int opMetrics();
-void opCleanup();
-size_t opCount();
-const DemographicRecord* opAt(size_t idx);
-void setOpFileName(const char* fn);
-void setOpFilterRegion(const char* region);
-void setOpColumn(int idx);
-void getOpStats(size_t* total, size_t* bad);
-void getOpMetrics(double* mn, double* mx, double* md);
+int doOperations(OperationsContext* ctx, Operation op);
+
+size_t opCount(const OperationsContext* ctx);
+const DemographicRecord* opAt(const OperationsContext* ctx, size_t idx);
+void getOpStats(const OperationsContext* ctx, size_t* total, size_t* bad);
+void getOpMetrics(const OperationsContext* ctx, double* mn, double* mx, double* md);
+void setOpFileName(OperationsContext* ctx, const char* fn);
+void setOpFilterRegion(OperationsContext* ctx, const char* region);
+void setOpColumn(OperationsContext* ctx, int idx);
 
 #endif

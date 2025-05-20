@@ -1,88 +1,55 @@
 #include "entrypoint.h"
 #include "operations.h"
 
-static OperationsContext g_ctx;
-
-int opInit()
+int doOperations(OperationsContext* ctx, Operation op)
 {
-    return initOperationsContext(&g_ctx);
-}
-
-int opLoad()
-{
-    return loadData(&g_ctx);
-}
-
-void opStats()
-{
-}
-
-int opMetrics()
-{
-    return computeMetrics(&g_ctx);
-}
-
-void opCleanup()
-{
-    cleanupOperationsContext(&g_ctx);
-}
-
-size_t opCount()
-{
-    return countRecords(&g_ctx);
-}
-
-const DemographicRecord* opAt(size_t idx)
-{
-    return getRecordAt(&g_ctx, idx);
-}
-
-void setOpFileName(const char* fn)
-{
-    setFileName(&g_ctx, fn);
-}
-
-void setOpFilterRegion(const char* region)
-{
-    setFilterRegion(&g_ctx, region);
-}
-
-void setOpColumn(int idx)
-{
-    setColumnIndex(&g_ctx, idx);
-}
-
-void getOpStats(size_t* total, size_t* bad)
-{
-    getLoadStats(&g_ctx, total, bad);
-}
-
-void getOpMetrics(double* mn, double* mx, double* md)
-{
-    getMetrics(&g_ctx, mn, mx, md);
-}
-
-int doOperations(Operation op)
-{
-    int result = ERR_USER_INPUT;
     if (op == OP_INIT) {
-        result = opInit();
+        return initOperationsContext(ctx);
     } else if (op == OP_LOAD) {
-        result = opLoad();
+        return loadData(ctx);
     } else if (op == OP_STATS) {
-        opStats();
-        result = OK;
+        return OK;
     } else if (op == OP_METRICS) {
-        result = opMetrics();
+        return computeMetrics(ctx);
     } else if (op == OP_CLEANUP) {
-        opCleanup();
-        result = OK;
-    } else if (op == OP_COUNT) {
-        (void)opCount();
-        result = OK;
-    } else if (op == OP_AT) {
-        (void)opAt(0);
-        result = OK;
+        cleanupOperationsContext(ctx);
+        return OK;
+    } else {
+        return ERR_USER_INPUT;
     }
-    return result;
+}
+
+size_t opCount(const OperationsContext* ctx)
+{
+    return countRecords(ctx);
+}
+
+const DemographicRecord* opAt(const OperationsContext* ctx, size_t idx)
+{
+    return getRecordAt(ctx, idx);
+}
+
+void getOpStats(const OperationsContext* ctx, size_t* total, size_t* bad)
+{
+    getLoadStats(ctx, total, bad);
+}
+
+void getOpMetrics(const OperationsContext* ctx, double* mn, double* mx, double* md)
+{
+    getMetrics(ctx, mn, mx, md);
+}
+
+void setOpFileName(OperationsContext* ctx, const char* fn)
+{
+    setFileName(ctx, fn);
+}
+
+void setOpFilterRegion(OperationsContext* ctx, const char* region)
+{
+    setFilterRegion(ctx, region);
+}
+
+void setOpColumn(OperationsContext* ctx, int idx)
+{
+    setColumnIndex(ctx, idx);
 }
