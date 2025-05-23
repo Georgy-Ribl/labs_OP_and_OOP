@@ -66,7 +66,8 @@ MainWindow::~MainWindow()
 
 void MainWindow::onChooseFileClicked()
 {
-    QString fn = QFileDialog::getOpenFileName(this, "Выберите CSV-файл", {}, "CSV Files (*.csv)");
+    QString fn = QFileDialog::getOpenFileName(this,
+                                              "Выберите CSV-файл", {}, "CSV Files (*.csv)");
     if (!fn.isEmpty())
         m_fileEdit->setText(fn);
 }
@@ -79,15 +80,15 @@ void MainWindow::onLoadDataClicked()
         return;
     }
 
-    doOperations();
-    setOpFileName(&m_ctx, path.toUtf8().constData());
+    doOperations(&m_ctx, OP_SET_FILE, path.toUtf8().constData());
     if (doOperations(&m_ctx, OP_LOAD) != OK) {
         QMessageBox::warning(this, "Ошибка", "Не удалось загрузить CSV");
         return;
     }
 
-    size_t total = 0, bad = 0;
-    getOpStats(&m_ctx, &total, &bad);
+    doOperations(&m_ctx, OP_STATS);
+    size_t total = m_ctx.totalLines;
+    size_t bad   = m_ctx.errorLines;
     QMessageBox::information(this, "Информация",
                              QString("Всего строк: %1\nОшибок: %2")
                                  .arg((int)total).arg((int)bad));
@@ -102,18 +103,18 @@ void MainWindow::fillTable()
     m_table->setHorizontalHeaderLabels(
         {"year","region","npg","birth","death","gdw","urban"});
 
-    size_t cnt = opCount(&m_ctx);
+    size_t cnt = (size_t)doOperations(&m_ctx, OP_COUNT);
     m_table->setRowCount(0);
 
     const char* filter = nullptr;
+    std::string tmp;
     if (!m_regionEdit->text().isEmpty()) {
-        static std::string tmp;
         tmp = m_regionEdit->text().toStdString();
         filter = tmp.c_str();
     }
 
     for (size_t i = 0; i < cnt; ++i) {
-        const DemographicRecord* r = opAt(&m_ctx, i);
+        const DemographicRecord* r = &m_ctx.data.records[i];
         if (filter && std::strcmp(r->region, filter) != 0)
             continue;
 
@@ -138,16 +139,15 @@ void MainWindow::onCalculateMetricsClicked()
         return;
     }
 
-    setOpFilterRegion(&m_ctx, m_regionEdit->text().toUtf8().constData());
-    setOpColumn(&m_ctx, col);
+    doOperations(&m_ctx, OP_SET_REGION, m_regionEdit->text().toUtf8().constData());
+    doOperations(&m_ctx, OP_SET_COLUMN, nullptr, col);
+
     if (doOperations(&m_ctx, OP_METRICS) != OK) {
         QMessageBox::warning(this, "Ошибка", "Не удалось вычислить метрики");
         return;
     }
 
-    double mn, mx, md;
-    getOpMetrics(&m_ctx, &mn, &mx, &md);
-    m_minLbl->setText(QString::number(mn));
-    m_maxLbl->setText(QString::number(mx));
-    m_medLbl->setText(QString::number(md));
+    m_minLbl->setText(QString::number(m_ctx.minValue));
+    m_maxLbl->setText(QString::number(m_ctx.maxValue));
+    m_medLbl->setText(QString::number(m_ctx.medianValue));
 }
