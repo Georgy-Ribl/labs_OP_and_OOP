@@ -1,25 +1,23 @@
 #ifndef ENTRYPOINT_H
 #define ENTRYPOINT_H
 
-#include "demodata.h"
+#include "operations.h"
 
 typedef enum {
-    OP_INIT,
+    OP_INIT = 1,
+    OP_SET_FILE,
     OP_LOAD,
     OP_STATS,
+    OP_SET_REGION,
+    OP_SET_COLUMN,
     OP_METRICS,
-    OP_CLEANUP,
     OP_COUNT,
-    OP_AT
+    OP_CLEANUP
 } Operation;
 
-int doOperations(Operation op);
-void setFileName(const char* fn);
-void setFilterRegion(const char* region);
-void setColumn(int column);
-size_t getCount(void);
-const DemographicRecord* getAt(size_t idx);
-double getField(const DemographicRecord* record, int column);
-void getMetrics(double* outMin, double* outMax, double* outMedian);
+int doOperations(OperationsContext* ctx,
+                 Operation           op,
+                 const char*         strParam = nullptr,
+                 int                 numParam = 0);
 
-#endif
+#endif // ENTRYPOINT_H

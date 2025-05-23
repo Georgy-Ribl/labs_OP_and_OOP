@@ -1,34 +1,34 @@
 #include "entrypoint.h"
 #include "operations.h"
 
-int doOperations(Operation op) {
-    int result;
+int doOperations(OperationsContext* ctx,
+                 Operation           op,
+                 const char*         strParam,
+                 int                 numParam)
+{
     if (op == OP_INIT) {
-        result = opInit();
+        return initOperationsContext(ctx);
+    } else if (op == OP_SET_FILE) {
+        setFileName(ctx, strParam);
+        return OK;
     } else if (op == OP_LOAD) {
-        result = opLoad();
+        return loadData(ctx);
     } else if (op == OP_STATS) {
-        opStats();
-        result = OK;
+        getLoadStats(ctx, &ctx->totalLines, &ctx->errorLines);
+        return OK;
+    } else if (op == OP_SET_REGION) {
+        setFilterRegion(ctx, strParam);
+        return OK;
+    } else if (op == OP_SET_COLUMN) {
+        setColumnIndex(ctx, numParam);
+        return OK;
     } else if (op == OP_METRICS) {
-        result = opMetrics();
-    } else if (op == OP_CLEANUP) {
-        opCleanup();
-        result = OK;
+        return computeMetrics(ctx);
     } else if (op == OP_COUNT) {
-        result = (int)opCount();
-    } else if (op == OP_AT) {
-        result = OK;
-    } else {
-        result = ERR_USER_INPUT;
+        return (int)countRecords(ctx);
+    } else if (op == OP_CLEANUP) {
+        cleanupOperationsContext(ctx);
+        return OK;
     }
-    return result;
+    return ERR_USER_INPUT;
 }
-
-void setFileName(const char* fn) { setOpFileName(fn); }
-void setFilterRegion(const char* region) { setOpFilterRegion(region); }
-void setColumn(int column) { setOpColumn(column); }
-size_t getCount(void) { return opCount(); }
-const DemographicRecord* getAt(size_t idx) { return opAt(idx); }
-double getField(const DemographicRecord* record, int column) { return get_field(record, column); }
-void getMetrics(double* outMin, double* outMax, double* outMedian) { getOpMetrics(outMin, outMax, outMedian); }

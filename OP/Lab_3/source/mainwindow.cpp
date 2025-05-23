@@ -1,5 +1,6 @@
 #include "mainwindow.h"
 #include "entrypoint.h"
+#include "operations.h"
 #include <QFileDialog>
 #include <QMessageBox>
 #include <QVBoxLayout>
@@ -8,11 +9,12 @@
 #include <vector>
 #include <cstdlib>
 #include <cstring>
+#include <QDebug>
 
 MainWindow::MainWindow(QWidget *parent)
     : QMainWindow(parent)
 {
-    doOperations(OP_INIT);
+    doOperations(&m_ctx, OP_INIT);
 
     QWidget* central = new QWidget(this);
     QVBoxLayout* vlay = new QVBoxLayout(central);
@@ -69,13 +71,14 @@ MainWindow::MainWindow(QWidget *parent)
 
 MainWindow::~MainWindow()
 {
-    doOperations(OP_CLEANUP);
+    doOperations(&m_ctx, OP_CLEANUP);
 }
 
 void MainWindow::onChooseFileClicked()
 {
     QString fn = QFileDialog::getOpenFileName(this, "Выберите CSV-файл", QString(), "CSV Files (*.csv)");
-    if (!fn.isEmpty()) m_fileEdit->setText(fn);
+    if (!fn.isEmpty())
+        m_fileEdit->setText(fn);
 }
 
 void MainWindow::onLoadDataClicked()
@@ -85,8 +88,8 @@ void MainWindow::onLoadDataClicked()
         QMessageBox::warning(this, "Ошибка", "Путь к файлу пуст");
         return;
     }
-    setFileName(path.toUtf8().constData());
-    if (doOperations(OP_LOAD) != OK) {
+    doOperations(&m_ctx, OP_SET_FILE, path.toUtf8().constData());
+    if (doOperations(&m_ctx, OP_LOAD) != OK) {
         QMessageBox::warning(this, "Ошибка", "Не удалось загрузить CSV");
         return;
     }
@@ -100,8 +103,10 @@ void MainWindow::fillTable()
     m_table->setHorizontalHeaderLabels({"year","region","npg","birth","death","gdw","urban"});
     m_table->setRowCount(0);
 
-    for (size_t i = 0; i < getCount(); ++i) {
-        const DemographicRecord* r = getAt(i);
+    size_t cnt = doOperations(&m_ctx, OP_COUNT);
+    for (size_t i = 0; i < cnt; ++i) {
+        const DemographicRecord* r = opAt(&m_ctx, i);
+        if (!r) continue;
         if (!m_regionEdit->text().isEmpty() &&
             strcmp(r->region, m_regionEdit->text().toUtf8().constData()) != 0)
             continue;
@@ -126,28 +131,53 @@ void MainWindow::onCalculateMetricsClicked()
         QMessageBox::warning(this, "Ошибка", "Неверный номер колонки");
         return;
     }
-    setFilterRegion(m_regionEdit->text().toUtf8().constData());
-    setColumn(col);
-    if (doOperations(OP_METRICS) != OK) {
+    if (col < 0 || col > 6) {
+        QMessageBox::warning(this, "Ошибка", "Номер колонки вне диапазона (0-6)");
+        return;
+    }
+
+    doOperations(&m_ctx, OP_SET_REGION,  m_regionEdit->text().toUtf8().constData());
+    doOperations(&m_ctx, OP_SET_COLUMN, nullptr, col);
+    if (doOperations(&m_ctx, OP_METRICS) != OK) {
         QMessageBox::warning(this, "Ошибка", "Не удалось вычислить метрики");
         return;
     }
 
-    double mn, mx, md;
-    getMetrics(&mn, &mx, &md);
+    double mn = m_ctx.minValue;
+    double mx = m_ctx.maxValue;
+    double md = m_ctx.medianValue;
+
     m_minLbl->setText(QString::number(mn));
     m_maxLbl->setText(QString::number(mx));
     m_medLbl->setText(QString::number(md));
 
-    std::vector<int> years;
-    std::vector<double> vals;
-    for (size_t i = 0; i < getCount(); ++i) {
-        const DemographicRecord* r = getAt(i);
+    m_yearsCache.clear();
+    m_valsCache.clear();
+
+    size_t cnt2 = doOperations(&m_ctx, OP_COUNT);
+    for (size_t i = 0; i < cnt2; ++i) {
+        const DemographicRecord* r = opAt(&m_ctx, i);
+        if (!r) continue;
         if (!m_regionEdit->text().isEmpty() &&
             strcmp(r->region, m_regionEdit->text().toUtf8().constData()) != 0)
             continue;
-        years.push_back(atoi(r->year));
-        vals.push_back(getField(r, col));
+        m_yearsCache.push_back(atoi(r->year));
+        m_valsCache.push_back(get_field(r, col));
     }
-    m_chart->setData(years, vals, mn, mx, md);
+
+    if (m_yearsCache.empty() || m_valsCache.empty()) {
+        QMessageBox::warning(this, "Ошибка", "Нет данных для построения графика");
+        return;
+    }
+
+    std::vector<std::pair<int,double>> combined;
+    for (size_t i=0; i<m_yearsCache.size(); ++i)
+        combined.emplace_back(m_yearsCache[i], m_valsCache[i]);
+    std::sort(combined.begin(), combined.end(), [](auto& a, auto& b) { return a.first < b.first; });
+    for (size_t i=0; i<combined.size(); ++i) {
+        m_yearsCache[i] = combined[i].first;
+        m_valsCache[i] = combined[i].second;
+    }
+
+    m_chart->setData(&m_yearsCache, &m_valsCache, mn, mx, md);
 }

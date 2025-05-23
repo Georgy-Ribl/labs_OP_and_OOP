@@ -1,47 +1,144 @@
 #include "chartwidget.h"
 #include <QPainter>
-#include <QFont>
+#include <QPen>
+#include <QFontMetrics>
+#include <QPainterPath>
+#include <algorithm>
+#include <cmath>
 
-ChartWidget::ChartWidget(QWidget* parent)
-    : QWidget(parent), m_min(0), m_max(0), m_med(0) {}
+ChartWidget::ChartWidget(QWidget *parent)
+    : QWidget(parent)
+{
+}
 
-void ChartWidget::setData(const std::vector<int>& years,
-                          const std::vector<double>& values,
-                          double mn, double mx, double md) {
+void ChartWidget::setData(const std::vector<int>* years,
+                          const std::vector<double>* values,
+                          double minValue,
+                          double maxValue,
+                          double medianValue)
+{
     m_years = years;
     m_values = values;
-    m_min = mn; m_max = mx; m_med = md;
+    m_minValue = minValue;
+    m_maxValue = maxValue;
+    m_medianValue = medianValue;
     update();
 }
 
-void ChartWidget::paintEvent(QPaintEvent*) {
-    QPainter p(this);
-    p.setRenderHint(QPainter::Antialiasing);
-    QRectF r = contentsRect();
-    p.drawLine(r.bottomLeft(), r.bottomRight());
-    p.drawLine(r.bottomLeft(), r.topLeft());
-    p.setFont(QFont("Arial",8));
-    p.drawText(r.bottomRight()+QPointF(-30,-5), "Year");
-    p.drawText(r.topLeft()+QPointF(5,15), "Value");
-    if (m_years.empty())
+void ChartWidget::paintEvent(QPaintEvent*)
+{
+    if (!m_years || !m_values || m_years->empty() || m_values->empty()) {
         return;
-    double x0=r.left(), x1=r.right(), y0=r.bottom(), y1=r.top();
-    int n=m_years.size();
-    int ymin=m_years.front(), ymax=m_years.back();
+    }
 
-    auto mapX= [&](int yr){ return x0 + double(yr-ymin)/(ymax-ymin)*(x1-x0); };
-    auto mapY= [&](double v){ return y0 - (v-m_min)/(m_max-m_min)*(y0-y1); };
+    if (m_years->size() != m_values->size()) {
+        return;
+    }
 
-    for(int i=1; i<n; ++i)
-        p.drawLine(QPointF(mapX(m_years[i-1]),mapY(m_values[i-1])),
-                   QPointF(mapX(m_years[i]),  mapY(m_values[i])));
-    p.setBrush(Qt::red);
-    p.drawEllipse(QPointF(mapX(m_years.front()), mapY(m_min)),4,4);
-    p.drawEllipse(QPointF(mapX(m_years.back()),  mapY(m_max)),4,4);
-    int mid = n/2;
-    p.drawEllipse(QPointF(mapX(m_years[mid]),   mapY(m_med)),4,4);
-    p.setFont(QFont("Arial",7));
-    p.drawText(mapX(m_years.front()), mapY(m_min)-5, "Min");
-    p.drawText(mapX(m_years.back()),  mapY(m_max)-5, "Max");
-    p.drawText(mapX(m_years[mid]),    mapY(m_med)-5, "Med");
+    QPainter painter(this);
+    painter.setRenderHint(QPainter::Antialiasing);
+
+    QColor bgColor = palette().color(QPalette::Window);
+    painter.fillRect(rect(), bgColor);
+
+    int w = width();
+    int h = height();
+
+    const int marginLeft = 60;
+    const int marginBottom = 50;
+    const int marginTop = 20;
+    const int marginRight = 20;
+
+    painter.setPen(QPen(Qt::white, 2));
+    painter.drawLine(marginLeft, marginTop, marginLeft, h - marginBottom); // ось Y
+    painter.drawLine(marginLeft, h - marginBottom, w - marginRight, h - marginBottom); // ось X
+
+    QFont font = painter.font();
+    font.setPointSize(8);
+    painter.setFont(font);
+    QFontMetrics fm(font);
+
+    int stepsY = 5;
+    for (int i = 0; i <= stepsY; ++i) {
+        double val = m_minValue + (m_maxValue - m_minValue) * i / stepsY;
+        int y = h - marginBottom - (h - marginTop - marginBottom) * i / stepsY;
+        QString text = QString::number(val, 'f', 2);
+        painter.drawText(marginLeft - fm.horizontalAdvance(text) - 10, y + fm.height() / 2 - 3, text);
+        painter.drawLine(marginLeft - 4, y, marginLeft, y);
+    }
+
+    int n = (int)m_years->size();
+    if (n < 2) {
+        painter.drawText(marginLeft + 10, marginTop + 20, "Недостаточно данных");
+        return;
+    }
+
+    double stepX = (double)(w - marginLeft - marginRight) / (n - 1);
+
+    int maxLabels = 10;
+    int labelStep = n / maxLabels;
+    if (labelStep == 0) labelStep = 1;
+
+    for (int i = 0; i < n; i += labelStep) {
+        int x = marginLeft + static_cast<int>(stepX * i);
+        QString yearText = QString::number(m_years->at(i));
+        painter.drawText(x - fm.horizontalAdvance(yearText) / 2, h - marginBottom + fm.height() + 10, yearText);
+        painter.drawLine(x, h - marginBottom, x, h - marginBottom + 4);
+    }
+
+    auto valueToY = [&](double val) {
+        return h - marginBottom - (val - m_minValue) / (m_maxValue - m_minValue) * (h - marginTop - marginBottom);
+    };
+
+    std::vector<double> smoothValues(n);
+    int windowSize = 5;
+    for (int i = 0; i < n; ++i) {
+        int count = 0;
+        double sum = 0;
+        for (int j = i - windowSize / 2; j <= i + windowSize / 2; ++j) {
+            if (j >= 0 && j < n) {
+                sum += m_values->at(j);
+                count++;
+            }
+        }
+        smoothValues[i] = sum / count;
+    }
+
+    painter.setPen(QPen(Qt::white, 3));
+    QPainterPath path;
+    path.moveTo(marginLeft, valueToY(smoothValues[0]));
+    for (int i = 1; i < n; ++i) {
+        double ctrlX = (marginLeft + stepX * (i - 1) + marginLeft + stepX * i) / 2;
+        path.quadTo(ctrlX, valueToY(smoothValues[i - 1]), marginLeft + stepX * i, valueToY(smoothValues[i]));
+    }
+    painter.drawPath(path);
+
+    painter.setPen(QPen(Qt::red));
+    painter.setBrush(Qt::red);
+    int medianIndex = 0;
+    double minDist = 1e9;
+    for (int i = 0; i < n; ++i) {
+        double diff = std::abs(m_values->at(i) - m_medianValue);
+        if (diff < minDist) {
+            minDist = diff;
+            medianIndex = i;
+        }
+    }
+    int medianX = marginLeft + static_cast<int>(stepX * medianIndex);
+    int medianY = valueToY(m_values->at(medianIndex));
+    painter.drawEllipse(QPoint(medianX, medianY), 5, 5);
+    painter.drawText(medianX + 5, medianY - 5, "Med");
+
+    painter.setPen(QPen(Qt::red, 1, Qt::DashLine));
+    int yMin = valueToY(m_minValue);
+    int yMax = valueToY(m_maxValue);
+    int yMed = valueToY(m_medianValue);
+    painter.drawLine(marginLeft, yMin, w - marginRight, yMin);
+    painter.drawLine(marginLeft, yMax, w - marginRight, yMax);
+    painter.drawLine(marginLeft, yMed, w - marginRight, yMed);
+
+    painter.setPen(Qt::white);
+    painter.drawText(w - marginRight - 50, yMin - 5, "Min");
+    painter.drawText(w - marginRight - 50, yMax - 5, "Max");
+    painter.drawText(w - marginRight - 50, yMed - 5, "Median");
 }

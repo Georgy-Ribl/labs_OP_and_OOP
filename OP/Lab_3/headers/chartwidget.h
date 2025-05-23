@@ -4,19 +4,28 @@
 #include <QWidget>
 #include <vector>
 
-class ChartWidget : public QWidget {
+class ChartWidget : public QWidget
+{
     Q_OBJECT
+
 public:
-    explicit ChartWidget(QWidget* parent = nullptr);
-    void setData(const std::vector<int>& years,
-                 const std::vector<double>& values,
-                 double mn, double mx, double md);
+    explicit ChartWidget(QWidget *parent = nullptr);
+    void setData(const std::vector<int>* years,
+                 const std::vector<double>* values,
+                 double minValue,
+                 double maxValue,
+                 double medianValue);
+
 protected:
     void paintEvent(QPaintEvent* event) override;
+
 private:
-    std::vector<int>    m_years;
-    std::vector<double> m_values;
-    double m_min, m_max, m_med;
+    const std::vector<int>* m_years = nullptr;
+    const std::vector<double>* m_values = nullptr;
+
+    double m_minValue = 0.0;
+    double m_maxValue = 0.0;
+    double m_medianValue = 0.0;
 };
 
 #endif // CHARTWIDGET_H

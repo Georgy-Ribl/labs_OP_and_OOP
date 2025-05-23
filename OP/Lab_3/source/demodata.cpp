@@ -26,7 +26,7 @@ int parseCSVFile(const char* filename,
     if (!f) return ERR_FILE;
     char line[1024];
     *totalLines = *errorLines = 0;
-    fgets(line, sizeof(line), f); // skip header
+    fgets(line, sizeof(line), f);
     while (fgets(line, sizeof(line), f)) {
         (*totalLines)++;
         size_t len = strlen(line);

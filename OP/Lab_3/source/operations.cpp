@@ -1,42 +1,61 @@
 #include "operations.h"
-#include "demodata.h"
-#include "metrics.h"
-#include <string.h>
 
-static DemographicArray gData;
-static size_t gTotal, gBad;
-static char gFileName[256];
-static char gFilter[256];
-static int gColumn;
-static double gMin, gMax, gMed;
-
-int opInit(void) {
-    gTotal = gBad = 0;
-    gFileName[0] = gFilter[0] = '\0';
-    gColumn = COL_NPG;
-    return initDemographicArray(&gData);
+int initOperationsContext(OperationsContext* ctx) {
+    ctx->totalLines = ctx->errorLines = 0;
+    ctx->fileName[0] = ctx->filter[0] = '\0';
+    ctx->columnIndex = COL_NPG;
+    ctx->minValue = ctx->maxValue = ctx->medianValue = 0.0;
+    return initDemographicArray(&ctx->data);
 }
 
-int opLoad(void) {
-    freeDemographicArray(&gData);
-    initDemographicArray(&gData);
-    return parseCSVFile(gFileName, &gData, &gTotal, &gBad);
+int loadData(OperationsContext* ctx) {
+    freeDemographicArray(&ctx->data);
+    initDemographicArray(&ctx->data);
+    return parseCSVFile(ctx->fileName,
+                        &ctx->data,
+                        &ctx->totalLines,
+                        &ctx->errorLines);
 }
 
-void opStats(void) {/* not used currently */}
-
-int opMetrics(void) {
-    return calculate_min_max_median(&gData, gFilter, gColumn, &gMin, &gMax, &gMed);
+void getLoadStats(OperationsContext* ctx, size_t* total, size_t* bad) {
+    if (total) *total = ctx->totalLines;
+    if (bad)   *bad   = ctx->errorLines;
 }
 
-void opCleanup(void) {
-    freeDemographicArray(&gData);
+void setFileName(OperationsContext* ctx, const char* fn) {
+    strncpy(ctx->fileName, fn, MAX_FILENAME_LEN-1);
+    ctx->fileName[MAX_FILENAME_LEN-1] = '\0';
 }
 
-size_t opCount(void) { return gData.size; }
-const DemographicRecord* opAt(size_t idx) { return idx<gData.size ? &gData.records[idx] : NULL; }
-void setOpFileName(const char* fn)  { strncpy(gFileName, fn, sizeof(gFileName)-1); }
-void setOpFilterRegion(const char* r){ strncpy(gFilter, r, sizeof(gFilter)-1); }
-void setOpColumn(int c)             { gColumn = c; }
-void getOpStats(size_t* t,size_t* b){ if(t)*t=gTotal; if(b)*b=gBad; }
-void getOpMetrics(double* mn,double* mx,double* md){ if(mn)*mn=gMin; if(mx)*mx=gMax; if(md)*md=gMed; }
+void setFilterRegion(OperationsContext* ctx, const char* region) {
+    strncpy(ctx->filter, region, MAX_FILTER_LEN-1);
+    ctx->filter[MAX_FILTER_LEN-1] = '\0';
+}
+
+void setColumnIndex(OperationsContext* ctx, int idx) {
+    ctx->columnIndex = idx;
+}
+
+int computeMetrics(OperationsContext* ctx) {
+    return calculate_min_max_median(
+        &ctx->data,
+        ctx->filter,
+        ctx->columnIndex,
+        &ctx->minValue,
+        &ctx->maxValue,
+        &ctx->medianValue
+        );
+}
+
+size_t countRecords(OperationsContext* ctx) {
+    return ctx->data.size;
+}
+
+void cleanupOperationsContext(OperationsContext* ctx) {
+    freeDemographicArray(&ctx->data);
+}
+
+const DemographicRecord* opAt(const OperationsContext* ctx, size_t index) {
+    if (!ctx || index >= ctx->data.size) return NULL;
+    return &ctx->data.records[index];
+}
