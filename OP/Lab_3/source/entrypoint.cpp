@@ -24,3 +24,11 @@ int doOperations(Operation op) {
     }
     return result;
 }
+
+void setFileName(const char* fn) { setOpFileName(fn); }
+void setFilterRegion(const char* region) { setOpFilterRegion(region); }
+void setColumn(int column) { setOpColumn(column); }
+size_t getCount(void) { return opCount(); }
+const DemographicRecord* getAt(size_t idx) { return opAt(idx); }
+double getField(const DemographicRecord* record, int column) { return get_field(record, column); }
+void getMetrics(double* outMin, double* outMax, double* outMedian) { getOpMetrics(outMin, outMax, outMedian); }

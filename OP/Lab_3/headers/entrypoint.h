@@ -1,7 +1,7 @@
 #ifndef ENTRYPOINT_H
 #define ENTRYPOINT_H
 
-#include "operations.h"
+#include "demodata.h"
 
 typedef enum {
     OP_INIT,
@@ -14,5 +14,12 @@ typedef enum {
 } Operation;
 
 int doOperations(Operation op);
+void setFileName(const char* fn);
+void setFilterRegion(const char* region);
+void setColumn(int column);
+size_t getCount(void);
+const DemographicRecord* getAt(size_t idx);
+double getField(const DemographicRecord* record, int column);
+void getMetrics(double* outMin, double* outMax, double* outMedian);
 
-#endif // ENTRYPOINT_H
+#endif
