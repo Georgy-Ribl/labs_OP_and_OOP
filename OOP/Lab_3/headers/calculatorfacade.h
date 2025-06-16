@@ -16,7 +16,6 @@ class CalculatorFacade {
     size_t historyPos{0};
 
 public:
-    // API для UI
     void input(const std::string& in);
     void evaluate();
     void undo();
@@ -26,13 +25,11 @@ public:
     void memoryRecall();
     void memoryClear();
 
-    // «Сырые» операции для команд
     void rawInput(const std::string& in);
     void rawDel();
 
     const std::string& getExpression() const { return currentExpr; }
 
-    // Доступ для команд
     void _setExpression(const std::string& e) { currentExpr = e; }
     const std::string& _getExpression() const { return currentExpr; }
     void _setLastResult(double v) { lastResult = v; }

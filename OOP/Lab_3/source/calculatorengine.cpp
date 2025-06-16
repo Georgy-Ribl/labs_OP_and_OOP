@@ -3,24 +3,20 @@
 #include <cmath>
 #include <algorithm>
 
-// --- ConcreteNumber ---
 ConcreteNumber::ConcreteNumber(double v) : val(v) {}
 double ConcreteNumber::value() const { return val; }
 
-// --- Tokenization ---
 std::vector<Token> CalculatorEngine::tokenize(const std::string& expr) {
     std::vector<Token> tokens;
     size_t i = 0;
     while (i < expr.size()) {
         if (std::isspace(expr[i])) { ++i; continue; }
-        // Number
         if (std::isdigit(expr[i]) || expr[i]=='.') {
             size_t s = i;
             while (i<expr.size() && (std::isdigit(expr[i])||expr[i]=='.')) ++i;
             tokens.push_back({TokenType::Number, expr.substr(s,i-s)});
             continue;
         }
-        // Function or constant
         if (std::isalpha(expr[i])) {
             size_t s = i;
             while (i<expr.size() && std::isalpha(expr[i])) ++i;
@@ -33,14 +29,12 @@ std::vector<Token> CalculatorEngine::tokenize(const std::string& expr) {
                 tokens.push_back({TokenType::Number, std::to_string(M_E)});
             }
             else {
-                // normalize tg/tan, ctg/cot
                 if (name=="tan"||name=="tg")  name="tg";
                 if (name=="cot"||name=="ctg") name="ctg";
                 tokens.push_back({TokenType::Function, name});
             }
             continue;
         }
-        // Operator or parentheses
         char c = expr[i++];
         switch(c) {
         case '+': case '-': case '*': case '/':
@@ -56,7 +50,6 @@ std::vector<Token> CalculatorEngine::tokenize(const std::string& expr) {
     return tokens;
 }
 
-// --- Precedence & associativity ---
 int CalculatorEngine::precedence(const std::string& op) const {
     if (op=="!")            return 5;
     if (op=="^")            return 4;
@@ -65,11 +58,9 @@ int CalculatorEngine::precedence(const std::string& op) const {
     return 0;
 }
 bool CalculatorEngine::isLeftAssociative(const std::string& op) const {
-    // ^ and ! are right-associative
     return !(op=="^" || op=="!");
 }
 
-// --- Shunting-yard → RPN ---
 std::vector<Token> CalculatorEngine::toRPN(const std::vector<Token>& tokens) {
     std::vector<Token> out;
     std::stack<Token> ops;
@@ -111,7 +102,6 @@ std::vector<Token> CalculatorEngine::toRPN(const std::vector<Token>& tokens) {
     return out;
 }
 
-// --- Factorial helper ---
 static double factorial(double v) {
     if (v < 0) throw std::runtime_error("Factorial of negative");
     unsigned long long n = static_cast<unsigned long long>(std::floor(v+0.5));
@@ -120,7 +110,6 @@ static double factorial(double v) {
     return res;
 }
 
-// --- Evaluate RPN ---
 double CalculatorEngine::evalRPN(const std::vector<Token>& rpn) {
     std::stack<std::unique_ptr<Number>> st;
     for (auto& t: rpn) {
@@ -145,7 +134,7 @@ double CalculatorEngine::evalRPN(const std::vector<Token>& rpn) {
                 st.push(std::make_unique<ConcreteNumber>(r));
             }
         }
-        else { // Function
+        else {
             if (st.empty()) throw std::runtime_error("Invalid function");
             double v = st.top()->value(); st.pop();
             double r = 0;
@@ -164,7 +153,6 @@ double CalculatorEngine::evalRPN(const std::vector<Token>& rpn) {
     return st.top()->value();
 }
 
-// --- Public entry ---
 double CalculatorEngine::evaluate(const std::string& expression) {
     auto tokens = tokenize(expression);
     auto rpn    = toRPN(tokens);

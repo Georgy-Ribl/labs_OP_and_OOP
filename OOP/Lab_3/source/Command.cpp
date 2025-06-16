@@ -1,7 +1,6 @@
 #include "Command.h"
 #include "CalculatorFacade.h"
 
-// InputCommand
 InputCommand::InputCommand(CalculatorFacade& f, const std::string& in)
     : facade(f), input(in) {}
 
@@ -13,7 +12,6 @@ void InputCommand::undo() {
     facade.rawDel();
 }
 
-// EvaluateCommand
 EvaluateCommand::EvaluateCommand(CalculatorFacade& f) : facade(f) {}
 
 void EvaluateCommand::execute() {
@@ -25,7 +23,6 @@ void EvaluateCommand::undo() {
     facade._setExpression(prevExpr);
 }
 
-// MemoryCommand
 MemoryCommand::MemoryCommand(CalculatorFacade& f, Op op)
     : facade(f), operation(op), prevMemory(f._getMemory()) {}
 

@@ -1,7 +1,6 @@
 #include "CalculatorFacade.h"
 #include <stdexcept>
 
-// «Сырые» операции
 void CalculatorFacade::rawInput(const std::string& in) {
     if (in == "C") {
         currentExpr.clear();
@@ -18,20 +17,17 @@ void CalculatorFacade::rawDel() {
     if (!currentExpr.empty()) currentExpr.pop_back();
 }
 
-// Через команду
 void CalculatorFacade::input(const std::string& in) {
     auto cmd = std::make_unique<InputCommand>(*this, in);
     cmd->execute();
     _pushHistory(std::move(cmd));
 }
 
-// Вычисление
 void CalculatorFacade::evaluate() {
     lastResult = engine.evaluate(currentExpr);
     currentExpr = std::to_string(lastResult);
 }
 
-// Отмена/повтор
 void CalculatorFacade::undo() {
     if (historyPos == 0) return;
     historyPos--;
@@ -44,7 +40,6 @@ void CalculatorFacade::redo() {
     historyPos++;
 }
 
-// Память
 void CalculatorFacade::memoryAdd() {
     double v = std::stod(currentExpr);
     memory += v;
@@ -60,7 +55,6 @@ void CalculatorFacade::memoryClear() {
     memory = 0.0;
 }
 
-// История команд
 void CalculatorFacade::_pushHistory(std::unique_ptr<ICommand> cmd) {
     history.resize(historyPos);
     history.push_back(std::move(cmd));
