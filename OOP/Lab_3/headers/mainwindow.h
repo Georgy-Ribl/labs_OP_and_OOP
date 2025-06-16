@@ -5,7 +5,8 @@
 #include <QLineEdit>
 #include <QPushButton>
 #include <QGridLayout>
-#include <QWidget>
+#include <QVBoxLayout>
+#include <QHBoxLayout>
 #include "CalculatorFacade.h"
 
 class MainWindow : public QMainWindow {
@@ -16,12 +17,10 @@ public:
     ~MainWindow() override = default;
 
 private slots:
-    void onButtonClicked();
+    void onButtonClicked(const QString &t);
 
 private:
-    QWidget*       central;
-    QGridLayout*   grid;
-    QLineEdit*     display;
+    QLineEdit* display;
     CalculatorFacade facade;
 };
 

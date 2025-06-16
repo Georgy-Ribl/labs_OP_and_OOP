@@ -1,20 +1,37 @@
 #include "CalculatorFacade.h"
+#include "InputCommand.h"
+#include "EvaluateCommand.h"
+#include "MemoryCommand.h"
 #include <stdexcept>
+#include <cmath>
 
 void CalculatorFacade::rawInput(const std::string& in) {
+    if (currentExpr == "Error") {
+        if (in == "C" || in == "Del") {
+            currentExpr.clear();
+            return;
+        }
+        currentExpr.clear();
+    }
+
     if (in == "C") {
         currentExpr.clear();
-        return;
     }
-    if (in == "Del") {
-        if (!currentExpr.empty()) currentExpr.pop_back();
-        return;
+    else if (in == "Del") {
+        if (!currentExpr.empty())
+            currentExpr.pop_back();
     }
-    currentExpr += in;
+    else {
+        currentExpr += in;
+    }
 }
 
 void CalculatorFacade::rawDel() {
-    if (!currentExpr.empty()) currentExpr.pop_back();
+    if (currentExpr == "Error" || currentExpr.empty()) {
+        currentExpr.clear();
+    } else {
+        currentExpr.pop_back();
+    }
 }
 
 void CalculatorFacade::input(const std::string& in) {
@@ -24,33 +41,37 @@ void CalculatorFacade::input(const std::string& in) {
 }
 
 void CalculatorFacade::evaluate() {
-    lastResult = engine.evaluate(currentExpr);
-    currentExpr = std::to_string(lastResult);
-}
-
-void CalculatorFacade::undo() {
-    if (historyPos == 0) return;
-    historyPos--;
-    history[historyPos]->undo();
-}
-
-void CalculatorFacade::redo() {
-    if (historyPos >= history.size()) return;
-    history[historyPos]->execute();
-    historyPos++;
+    try {
+        double result = engine.evaluate(currentExpr);
+        if (std::isinf(result) || std::isnan(result)) {
+            currentExpr = "Error";
+        } else {
+            lastResult = result;
+            currentExpr = std::to_string(result);
+        }
+    } catch (...) {
+        currentExpr = "Error";
+    }
 }
 
 void CalculatorFacade::memoryAdd() {
-    double v = std::stod(currentExpr);
-    memory += v;
+    try {
+        double v = std::stod(currentExpr);
+        memory += v;
+    } catch (...) {}
 }
+
 void CalculatorFacade::memorySub() {
-    double v = std::stod(currentExpr);
-    memory -= v;
+    try {
+        double v = std::stod(currentExpr);
+        memory -= v;
+    } catch (...) {}
 }
+
 void CalculatorFacade::memoryRecall() {
     currentExpr = std::to_string(memory);
 }
+
 void CalculatorFacade::memoryClear() {
     memory = 0.0;
 }
