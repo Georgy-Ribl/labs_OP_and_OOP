@@ -7,8 +7,7 @@ enum class TokenType {
     Number,
     Operator,
     LeftParen,
-    RightParen,
-    Function
+    RightParen
 };
 
 class Token {
@@ -18,8 +17,8 @@ public:
     TokenType getType() const;
     const std::string& getText() const;
 
-    void setType(TokenType type);
-    void setText(const std::string &text);
+    void setType(TokenType t);
+    void setText(const std::string &txt);
 
 private:
     TokenType   type_;

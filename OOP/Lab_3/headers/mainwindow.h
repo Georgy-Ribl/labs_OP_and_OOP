@@ -14,14 +14,13 @@ class MainWindow : public QMainWindow {
 
 public:
     explicit MainWindow(QWidget *parent = nullptr);
-    ~MainWindow() override = default;
 
 private slots:
-    void onButtonClicked(const QString &t);
+    void onButtonClicked();
 
 private:
-    QLineEdit* display;
-    CalculatorFacade facade;
+    QLineEdit* display_;
+    CalculatorFacade facade_;
 };
 
 #endif // MAINWINDOW_H

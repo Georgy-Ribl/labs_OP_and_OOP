@@ -4,7 +4,7 @@
 #include <string>
 #include <vector>
 #include "Token.h"
-#include "Tokenizer.h"
+#include "tokenizer.h"
 
 class CalculatorEngine {
 public:
@@ -16,7 +16,9 @@ private:
     int precedence(const std::string& op) const;
     bool isLeftAssociative(const std::string& op) const;
 
-    Tokenizer tokenizer;
+    std::vector<Token> insertImplicitMultiplication(const std::vector<Token>& tokens) const;
+
+    Tokenizer tokenizer_;
 };
 
 #endif // CALCULATORENGINE_H
